@@ -39,7 +39,7 @@ class LX200:
 		self.send(command)
 		return None
 	
-	def getLocalTime(self):
+	def getLocalTime12(self):
 
 		return self.get("Ga")
 
@@ -51,13 +51,46 @@ class LX200:
 
 		return self.get("Gb")
 
-	def getCurrentData(self):
+	def getCurrentDate(self):
 		
 		return self.get("GC")
 
 	def getCalendarFormat(self):
 
 		return self.get("Gc")
+
+	def getTelescopeDeclination(self):
+
+		return self.get("GD")
+
+	def getCurrentlySelectedTargetDeclination(self):
+
+		return self.get("Gd")
+
+	def getFindFieldDiameter(self):
+
+		return self.get("GF")
+
+	def getBrowseFaintMagnitudeLimit(self):
+
+		return self.get("Gf")
+
+	def getUTCOffsettime(self):
+
+		return self.get("GG")
+
+	def getCurrentSiteLongitude(self):
+
+		return self.get("Gg")
+
+	def getHighLimit(self):
+
+		return self.get("Gh")
+
+	def getLocalTime24(self):
+
+		return self.get("GL")
+
 
 def test():
 
@@ -69,6 +102,9 @@ def test():
 	time.sleep(1)
 	scope.halt('e')
 	print scope.getAltitude()
+	import pdb
+	pdb.set_trace() 
 
 	pass
- 
+if __name__ == '__main__':
+	test()
