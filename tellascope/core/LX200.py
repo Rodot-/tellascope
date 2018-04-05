@@ -31,7 +31,12 @@ class MockSerial:
 
 	def write(self, *args):
 
-		return self.outbuffer.write(*args)
+		result = self.outbuffer.write(*args)
+		self.outbuffer.seek(0)
+		time.sleep(0.01)
+		self.process()
+		time.sleep(0.01)
+		return result
 
 	def read(self, *args):
 
@@ -39,22 +44,27 @@ class MockSerial:
 
 	def process(self):
 
-		data = self.outbuffer.getvalue()
-		self.outbuffer.truncate(0)
+		data = self.outbuffer.read()
 		self.inbuffer.write(data)
+		self.outbuffer.truncate(0)
+		self.inbuffer.seek(0)
 
 	def reset_input_buffer(self):
 
+		self.inbuffer.seek(0)
 		self.inbuffer.truncate(0)
 
 	def reset_output_buffer(self):
 
+		self.outbuffer.seek(0)
 		self.outbuffer.truncate(0)
 
 	@property
 	def in_waiting(self):
 
-		self.in_waiting = len(buff.getvalue())-buff.tell()
+		self._in_waiting = len(self.inbuffer.getvalue())-self.inbuffer.tell()
+		if not self._in_waiting:
+			self.inbuffer.truncate(0)
 		return self._in_waiting
 	
 
@@ -80,8 +90,11 @@ class SerialInterface(MockSerial):
 
 	def log(self, *text):
 
-		if self.logfile is not None:
-			print(*text, file=self.logfile)
+		try:
+			if self.logfile is not None:
+				print(*text, file=self.logfile)
+		except:
+			pass
 
 	def wait(self):
 
@@ -115,23 +128,23 @@ class SerialInterface(MockSerial):
 		self.log("Reading Bytes {")
 		if not self.in_waiting:
 			self.log("  No data\n}")
-			return ''
+			return bytearray()
 
-		while self.port.in_waiting > 0: # while there are bytes in the input buffer to be read
+		while self.in_waiting > 0: # while there are bytes in the input buffer to be read
 
 			char = self.read(1)
 
 			if char == 0x15:
 				self.log(' ',
-					'ASCII NAK (0x15): Telescope control chain busy {\n ',
+					'ASCII NAK (0x15): Telescope control chain busy {{\n ',
 				  'Waiting for a full delay cycle.',
-					'({} ms)\n  }'.format(self.DELAY_MS))
+					'({} ms)\n  }}'.format(self.DELAY_MS))
 				time.sleep(self.DELAY)
 
 			else:
 				buffer.extend(char)
 
-		self.log('  Read:{} {\n    {} bytes\n  }\n}'\
+		self.log('  Read:{} {{\n    {} bytes\n  }}\n}}'\
 			.format(buffer.hex(), len(buffer)))
 
 		return buffer # this is a bytearray, the telescope object will have to convert it to string
@@ -148,8 +161,11 @@ class ObjectInterface:
 
 	def log(self, *text):
 
-		if self.logfile is not None:
-			print(*text, file=self.logfile)
+		try:
+			if self.logfile is not None:
+				print(*text, file=self.logfile)
+		except:
+			pass
 
 	def recv(self, n_bytes=None, callback=None):
 		'''abstraction from the port.recv to get ascii response'''
@@ -513,7 +529,6 @@ class Telescope(ObjectInterface):
 				3:'S'
 			}[rate]
 
-		return "R"+rate
 		self._slew_rate_ra = rate
 		self._slew_rate_dec = rate
 
@@ -542,7 +557,7 @@ class Telescope(ObjectInterface):
 	@slew_rate_dec.setter
 	@_send
 	def slew_rate_dec(self, rate):
-		'''decte is a floating point in degrees per second'''
+		'''rate is a floating point in degrees per second'''
 
 		rate = "E{:02.1f}".format(rate)
 		self._slew_rate_dec = rate[1:]
@@ -603,8 +618,34 @@ def test():
 		scope = Telescope(serial_port, logfile)
 		scope.slew_rate = 'G'
 		scope.slew_rate_ra = 1.23
+		scope.move('N')
+		scope.slew_to_target()
+		scope.halt()
+		scope.halt('W')
+		scope.park()
+		scope.sleep()
+		scope.wake()
+		print(scope.local_time)
+		print(scope.siderial_time)
+		print(scope.date)
+		print(scope.utc_offset)
+		print(scope.altitude)
+		print(scope.azimuth)
+		print(scope.longitude)
+		print(scope.latitude)
+		print(scope.declination)
+		print(scope.right_ascension)
+		print(scope.tracking_rate)
 		print(scope.slew_rate)
-		pdb.set_trace() 
+		print(scope.slew_rate_ra)
+		print(scope.slew_rate_dec)
+		print(scope.slew_rate)
+		print(scope.firmware_date)
+		print(scope.firmware_number)
+		print(scope.firmware_time)
+		print(scope.product_name)
+
+		#pdb.set_trace() 
 
 	pass
 if __name__ == '__main__':
